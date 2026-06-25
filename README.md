@@ -18,16 +18,19 @@ tous harmonisés derrière une interface unique pour pouvoir les comparer
 ## Structure
 
 ```
-solve.py              Point d'entrée unique : fonction solve() + CLI
+solve.py              Point d'entrée unique : fonction solve() + CLI (3 modes)
 readability.py        Rendu lisible enfant : score + ligne compacte + pas-à-pas
-models/               Les 9 modèles de résolution
+best_first.py         Solveur top-K direct (k-best) sans tout énumérer
+closest.py            Solveur « le plus proche » si la cible est inatteignable
+models/               Les 9 modèles d'énumération exhaustive
   _render.py          Rendu canonique partagé (mêmes chaînes pour tous)
   _masks.py           Pré-calcul des partitions (modèles deux-phases)
   m1..m9_*.py         Un fichier par algorithme
-benchmark/            Comparaison équitable (mêmes entrées pour tous)
+benchmark/            Comparaisons
   cases.py            Cas d'entrée partagés
-  bench.py            Chronométrage + vérification de cohérence
-tests/                Validation croisée (tous les modèles concordent)
+  bench.py            Comparaison équitable (mêmes entrées, vérif cohérence)
+  bench_extreme.py    Cas durs, timeout par modèle (où chaque approche cède)
+tests/                Validation croisée + tests rendu + tests solveurs
 archive/original/     Les scripts d'origine (main1.py … main9_improved.py)
 ```
 
@@ -37,11 +40,23 @@ archive/original/     Les scripts d'origine (main1.py … main9_improved.py)
 
 ```bash
 uv run python solve.py --nb 5 75 2 50 100 10 --cible 868
-uv run python solve.py --model brute_state --nb 100 9 7 1 --cible 50
 uv run python solve.py --nb 5 75 2 50 100 10 --cible 868 --top 3       # 3 meilleures
 uv run python solve.py --nb 5 75 2 50 100 10 --cible 868 --lvl college # style collège
+uv run python solve.py --nb 1 2 3 4 5 6 7 --cible 100 --mode best      # top-K direct
+uv run python solve.py --nb 100 25 7 3 --cible 813 --mode closest      # le plus proche
 uv run python solve.py --list          # liste des modèles disponibles
 ```
+
+### Modes (`--mode`)
+
+- **`all`** (défaut) : énumère **toutes** les solutions avec `--model`, en affiche
+  les `--top` plus lisibles. Idéal pour 6 plaques (instantané).
+- **`best`** : reconstruction *k-best* (`best_first.py`) — renvoie directement le
+  top-K sans matérialiser l'ensemble. Pratique jusqu'à ~7 plaques ; **ce n'est pas
+  un solveur qui passe à l'échelle** (à 8-9 plaques, la traversée domine comme
+  pour l'énumération).
+- **`closest`** : si la cible exacte est impossible, vise la **valeur atteignable
+  la plus proche** (`closest.py`) — la vraie règle du jeu télévisé.
 
 La sortie affiche les solutions **les plus lisibles** d'abord (cf. `readability.py`),
 chacune en ligne compacte + détail pas-à-pas :
@@ -82,10 +97,17 @@ print(len(solutions))   # -> 116
 uv run python benchmark/bench.py            # cas standards
 uv run python benchmark/bench.py --heavy    # ajoute un cas à 7 plaques
 uv run python benchmark/bench.py --iters 10
+uv run python benchmark/bench_extreme.py    # cas durs, timeout par modèle
 ```
 
-Le benchmark exécute tous les modèles **dans le même processus, sur les mêmes
+`bench.py` exécute tous les modèles **dans le même processus, sur les mêmes
 entrées**, et vérifie qu'ils renvoient le **même** ensemble de solutions.
+
+`bench_extreme.py` vise les cas à **explosion de solutions** (jusqu'à ~1,1 M),
+chaque modèle isolé avec timeout. On y voit nettement la hiérarchie : la force
+brute cède en premier, puis les DP « dictionnaire d'expressions », tandis que
+les deux-phases tiennent. `best_first` s'y aligne sur les meilleurs énumérateurs
+(il borne la sortie, pas la traversée).
 
 ## Tests
 

@@ -18,3 +18,12 @@ CASES = [
 HEAVY = [
     ([25, 50, 75, 100, 3, 6, 7], 952),
 ]
+
+# Cas « extrêmes » pour benchmark/bench_extreme.py. L'axe dur n'est pas tant le
+# nombre de plaques que le **nombre de solutions** (petites plaques), qui peut
+# atteindre le million et fait exploser la phase de reconstruction.
+EXTREME = [
+    ([25, 50, 75, 100, 3, 6, 7], 952),   # 7 grosses plaques : peu de solutions
+    ([1, 2, 3, 4, 5, 6, 7], 100),        # 7 petites plaques : ~28 700 solutions
+    ([2, 3, 4, 5, 6, 7, 8, 9], 100),     # 8 petites plaques : ~1,1 M de solutions
+]
