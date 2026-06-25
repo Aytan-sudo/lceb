@@ -1,0 +1,14 @@
+[project]
+name = "lceb"
+version = "0.1.0"
+description = "Solveur exhaustif de « Le compte est bon » — 9 algorithmes comparables"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "numpy>=2.5.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
