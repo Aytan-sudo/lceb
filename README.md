@@ -19,6 +19,7 @@ tous harmonisés derrière une interface unique pour pouvoir les comparer
 
 ```
 solve.py              Point d'entrée unique : fonction solve() + CLI
+readability.py        Rendu lisible enfant : score + ligne compacte + pas-à-pas
 models/               Les 9 modèles de résolution
   _render.py          Rendu canonique partagé (mêmes chaînes pour tous)
   _masks.py           Pré-calcul des partitions (modèles deux-phases)
@@ -37,8 +38,34 @@ archive/original/     Les scripts d'origine (main1.py … main9_improved.py)
 ```bash
 uv run python solve.py --nb 5 75 2 50 100 10 --cible 868
 uv run python solve.py --model brute_state --nb 100 9 7 1 --cible 50
+uv run python solve.py --nb 5 75 2 50 100 10 --cible 868 --top 3       # 3 meilleures
+uv run python solve.py --nb 5 75 2 50 100 10 --cible 868 --lvl college # style collège
 uv run python solve.py --list          # liste des modèles disponibles
 ```
+
+La sortie affiche les solutions **les plus lisibles** d'abord (cf. `readability.py`),
+chacune en ligne compacte + détail pas-à-pas :
+
+```
+  1. 10 × 100 − 5 − 75 − 50 − 2 = 868
+        10 × 100 = 1000
+        1000 − 5 = 995
+        995 − 75 = 920
+        920 − 50 = 870
+        870 − 2  = 868
+```
+
+Le score de lisibilité privilégie partout : peu de `÷` puis peu de `×`, des
+résultats intermédiaires ronds, et pas d'étapes inutiles (`×1`, `÷1`). Le style
+dépend du **niveau** (`--lvl`) :
+
+- **`primaire`** (défaut) : un seul total qui évolue, méthode école/télé.
+  Ex. `10 × 100 − 5 − 75 − 50 − 2` (un seul nombre à suivre, même s'il est grand).
+- **`college`** : regroupe les petits nombres pour limiter les calculs sur de
+  grands nombres. Ex. `10 × 100 − (5 + 75 + 50) − 2` (petits nombres, mais il
+  faut en tenir deux en tête).
+
+Les poids de chaque profil sont réglables en tête de `readability.py` (`PROFILES`).
 
 ### En bibliothèque
 

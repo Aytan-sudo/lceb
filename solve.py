@@ -19,6 +19,7 @@ import sys
 import time
 
 import models
+import readability
 
 
 def solve(model, nombres, cible):
@@ -33,8 +34,12 @@ def solve(model, nombres, cible):
 
 # ──────────────────────────── Rendu CLI ────────────────────────────
 
-def format_rapport(model, nombres, cible, solutions, secondes, limite=20):
-    """Rendu texte harmonisé d'une résolution."""
+def format_rapport(model, nombres, cible, solutions, secondes, top=5, level=readability.DEFAULT_LEVEL):
+    """Rendu texte harmonisé d'une résolution.
+
+    Affiche les ``top`` solutions les plus lisibles pour le niveau ``level``
+    (cf. readability.py), chacune en ligne compacte + détail pas-à-pas.
+    """
     mod = models.get(model)
     lignes = []
     lignes.append("═" * 64)
@@ -43,18 +48,24 @@ def format_rapport(model, nombres, cible, solutions, secondes, limite=20):
     lignes.append(f"  Plaques : {nombres}")
     lignes.append(f"  Cible   : {cible}")
     lignes.append(f"  Temps   : {secondes * 1000:.2f} ms")
-    lignes.append(f"  Solutions : {len(solutions)}")
+    lignes.append(f"  Solutions : {len(solutions)}   (niveau : {level})")
     lignes.append("─" * 64)
 
     if not solutions:
         lignes.append("  Aucune solution exacte (toutes les plaques).")
-    else:
-        for i, s in enumerate(sorted(solutions)[:limite], 1):
-            lignes.append(f"  {i:3d}. {s} = {cible}")
-        if len(solutions) > limite:
-            lignes.append(f"  … et {len(solutions) - limite} autre(s).")
+        return "\n".join(lignes)
 
-    return "\n".join(lignes)
+    meilleures = readability.top(solutions, top, level)
+    titre = "La plus simple :" if len(meilleures) == 1 else f"Les {len(meilleures)} plus simples :"
+    lignes.append(f"  {titre}")
+    lignes.append("")
+    for i, s in enumerate(meilleures, 1):
+        lignes.append(readability.format_solution(s, cible, numero=i))
+        lignes.append("")
+    if len(solutions) > len(meilleures):
+        lignes.append(f"  … et {len(solutions) - len(meilleures)} autre(s) solution(s).")
+
+    return "\n".join(lignes).rstrip()
 
 
 def _print_liste():
@@ -75,8 +86,10 @@ def main(argv=None):
     parser.add_argument("--nb", "-n", type=int, nargs="+", metavar="PLAQUE",
                         help="les plaques, séparées par des espaces")
     parser.add_argument("--cible", "-c", type=int, help="le résultat à atteindre")
-    parser.add_argument("--limite", "-l", type=int, default=20,
-                        help="nombre max de solutions affichées (défaut : 20)")
+    parser.add_argument("--top", "-t", type=int, default=5,
+                        help="nombre de solutions (les plus lisibles) affichées (défaut : 5)")
+    parser.add_argument("--lvl", choices=sorted(readability.PROFILES), default=readability.DEFAULT_LEVEL,
+                        help=f"niveau scolaire pour le classement (défaut : {readability.DEFAULT_LEVEL})")
     parser.add_argument("--list", action="store_true", help="lister les modèles et sortir")
     args = parser.parse_args(argv)
 
@@ -96,7 +109,7 @@ def main(argv=None):
     solutions = solve(args.model, args.nb, args.cible)
     dt = time.perf_counter() - t0
 
-    print(format_rapport(args.model, args.nb, args.cible, solutions, dt, args.limite))
+    print(format_rapport(args.model, args.nb, args.cible, solutions, dt, args.top, args.lvl))
     return 0
 
 
