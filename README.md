@@ -22,6 +22,7 @@ solve.py              Point d'entrée unique : fonction solve() + CLI (3 modes)
 readability.py        Rendu lisible enfant : score + ligne compacte + pas-à-pas
 best_first.py         Solveur top-K direct (k-best) sans tout énumérer
 closest.py            Solveur « le plus proche » si la cible est inatteignable
+generate.py           Générateur de tirages (plaques + cible) à difficulté graduée
 models/               Les 9 modèles d'énumération exhaustive
   _render.py          Rendu canonique partagé (mêmes chaînes pour tous)
   _masks.py           Pré-calcul des partitions (modèles deux-phases)
@@ -90,6 +91,38 @@ from solve import solve
 solutions = solve("twophase_targeted", [5, 75, 2, 50, 100, 10], 868)
 print(len(solutions))   # -> 116
 ```
+
+## Générateur de tirages (`generate.py`)
+
+Crée des couples **(plaques, cible)** étiquetés par un **niveau de difficulté**
+gradué — `facile`, `moyen`, `difficile`, `expert` — en réutilisant les briques
+existantes (reachability de `best_first`, score de `readability`).
+
+```bash
+uv run python generate.py --niveau facile          # un tirage facile
+uv run python generate.py --niveau expert --seed 7 # reproductible
+uv run python generate.py --serie                  # un tirage par niveau
+uv run python generate.py --niveau moyen --cible-min 50 --cible-max 300  # adapté primaire
+```
+
+```python
+from generate import generer, evaluer
+t = generer("difficile", seed=42)
+print(t.plaques, t.cible, t.niveau, t.indice)   # solution exacte garantie
+```
+
+Garanties et fonctionnement :
+
+- **Solution exacte garantie** : la cible est tirée *dans l'ensemble atteignable*
+  (toutes les plaques), donc le tirage est toujours résoluble exactement.
+- **Deck officiel paramétrable** : 1 à 10 (chacun ×2) + 25/50/75/100 (chacun ×1),
+  6 plaques, cible 101–999. Le nombre de plaques, la plage de cible et le deck
+  sont réglables (`--plaques`, `--cible-min/max`, argument `deck=`).
+- **Difficulté multi-signaux** : un **indice continu** combine la **rareté** des
+  solutions (peu de chemins ⇒ plus dur) et la **dureté de la solution la plus
+  simple** (nombre de `÷` puis de `×`), puis un seuillage donne le niveau. Poids
+  (`W_RARETE`, `W_DIV`, `W_MUL`) et seuils (`SEUILS`) sont réglables en tête de
+  module, comme les `PROFILES` de `readability`.
 
 ## Benchmark
 
